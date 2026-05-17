@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderFlow AI — SME Order Automation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #00e5a0;
+    --accent2: #7c3aed;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #f0f0f8;
+    --muted: #6b7280;
+    --green: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent); }
+  .badge {
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+
+  main {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 40px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .hero h1 .hl { color: var(--accent); }
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .msg-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .msg-list::-webkit-scrollbar { width: 4px; }
+  .msg-list::-webkit-scrollbar-track { background: transparent; }
+  .msg-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .msg-bubble:hover { border-color: var(--accent); background: rgba(0,229,160,0.05); }
+  .msg-bubble.active { border-color: var(--accent); background: rgba(0,229,160,0.08); }
+  .msg-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 4px;
+  }
+  .msg-text { color: var(--text); }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 90px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    width: 100%;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-sm {
+    padding: 6px 14px;
+    font-size: 12px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Output panel */
+  .output-panel { grid-column: 1 / -1; }
+
+  .result-box {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .placeholder-state {
+    text-align: center;
+    color: var(--muted);
+  }
+  .placeholder-icon { font-size: 40px; margin-bottom: 12px; }
+  .placeholder-state p { font-size: 14px; }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Order table */
+  .order-result { width: 100%; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+  .result-title {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+  .chip-success { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .chip-warn { background: rgba(245,158,11,0.15); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); }
+
+  .order-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .order-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .field-key {
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .field-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .field-val.missing { color: var(--danger); font-weight: 400; font-style: italic; font-size: 13px; }
+  .field-val.accent { color: var(--accent); }
+
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .items-table th {
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .items-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(42,42,61,0.5);
+    vertical-align: middle;
+  }
+  .items-table tr:last-child td { border-bottom: none; }
+  .qty-badge {
+    display: inline-block;
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .ai-notes {
+    background: rgba(124,58,237,0.08);
+    border: 1px solid rgba(124,58,237,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #c4b5fd;
+  }
+  .ai-notes-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #7c3aed;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Log */
+  .log-panel {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 28px;
+  }
+  .log-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .log-entry {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    display: flex;
+    gap: 12px;
+  }
+  .log-time { color: var(--muted); min-width: 70px; }
+  .log-msg.ok { color: var(--green); }
+  .log-msg.info { color: var(--accent); }
+  .log-msg.warn { color: var(--warn); }
+  .log-msg.err { color: var(--danger); }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .stat-num { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .output-panel, .log-panel { grid-column: 1; }
+    main { padding: 24px 20px; }
+    header { padding: 16px 20px; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div class="logo-text">Order<span>Flow</span> AI</div>
+  </div>
+  <div class="badge">● LIVE — Save-A-Hire Track</div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Turn Messy Messages into<br><span class="hl">Structured Orders</span></h1>
+    <p>Paste any WhatsApp, Telegram, or social media message — AI extracts customer name, items, quantities, address and flags missing info instantly.</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="statProcessed">0</div>
+      <div class="stat-lbl">Orders Processed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statItems">0</div>
+      <div class="stat-lbl">Line Items Extracted</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statComplete">0%</div>
+      <div class="stat-lbl">Completion Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statTime">—</div>
+      <div class="stat-lbl">Last Process Time</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Input panel -->
+    <div class="card">
+      <div class="card-label">Input — Customer Message</div>
+
+      <div class="msg-list" id="msgList">
+        <div class="msg-bubble" onclick="loadSample(0)">
+          <div class="msg-meta">WhatsApp · Sarah Lim · 10:32 AM</div>
+          <div class="msg-text">Hi! Can I order 2 boxes of chocolate muffins and 1 vanilla cake? Deliver to Blk 123 Tampines St 12 #04-05. Need by tomorrow evening pls!</div>
+        </div>
+        <div class="msg-bubble" onclick="loadSample(1)">
+          <div class="msg-meta">Telegram · @amirul92 · 2:15 PM</div>
+          <div class="msg-text">bro i want 5 nasi lemak special, 3 teh tarik, 2 roti canai. collection at 7pm. name Ahmad</div>
+        </div>
+        <div class="msg-bubble" onclick="loadSample(2)">
+          <div class="msg-meta">Instagram DM · johnchua_sg · 9:00 AM</div>
+          <div class="msg-text">Hello I would like to enquire about ordering 10 corporate gift boxes for my team. Budget around $50 each. Can deliver to Raffles Place office next Friday?</div>
+        </div>
+        <div class="msg-bubble" onclick="loadSample(3)">
+          <div class="msg-meta">WhatsApp · unknown · 11:45 PM</div>
+          <div class="msg-text">want to order lah. the usual. same as last time. let me know when ready</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px; font-size:12px; color:var(--muted)">↑ Click a sample or paste your own below</div>
+
+      <textarea id="msgInput" placeholder="Paste a customer message here...&#10;&#10;E.g. 'Hi can I order 3 chicken rice and 2 coke? Deliver to 45 Orchard Rd by 12pm. Name: Kevin'"></textarea>
+
+      <button class="btn btn-primary" id="processBtn" onclick="processMessage()">
+        ⚡ Extract Order with AI
+      </button>
+    </div>
+
+    <!-- Tips panel -->
+    <div class="card">
+      <div class="card-label">How It Works</div>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:32px;height:32px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">💬</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">Receive any message</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.5;">WhatsApp, Telegram, Instagram DMs, Facebook — any unstructured text from customers</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:32px;height:32px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🤖</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">AI extracts structure</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.5;">Claude AI pulls out customer name, items, quantities, delivery address, timing and payment info</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:32px;height:32px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🚨</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">Flags missing info</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.5;">Automatically detects incomplete orders and suggests what to ask the customer</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:32px;height:32px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">📋</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">Ready for your database</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.5;">Clean structured data — instantly ready to push to Google Sheets, Notion, or any CRM</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;">
+        <div style="font-size:11px;font-family:'Space Mono',monospace;color:var(--warn);margin-bottom:6px;">SME IMPACT</div>
+        <div style="font-size:13px;color:#fde68a;line-height:1.5;">A typical F&B SME receives 50–200 unstructured orders/day via WhatsApp. Manual processing takes <strong>3–5 mins per order</strong>. This workflow cuts it to <strong>under 10 seconds</strong>.</div>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div class="card output-panel">
+      <div class="card-label">Extracted Order Output</div>
+      <div class="result-box" id="resultBox">
+        <div class="placeholder-state">
+          <div class="placeholder-icon">🎯</div>
+          <p>Select a sample message or paste your own,<br>then click "Extract Order with AI"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log panel -->
+    <div class="log-panel">
+      <div class="log-title">// System Log</div>
+      <div class="log-entries" id="logEntries">
+        <div class="log-entry"><span class="log-time">00:00:00</span><span class="log-msg info">OrderFlow AI initialized. Powered by Claude (Anthropic).</span></div>
+        <div class="log-entry"><span class="log-time">00:00:00</span><span class="log-msg ok">Ready to process incoming customer messages.</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const SAMPLES = [
+  "Hi! Can I order 2 boxes of chocolate muffins and 1 vanilla cake? Deliver to Blk 123 Tampines St 12 #04-05. Need by tomorrow evening pls! My name is Sarah Lim",
+  "bro i want 5 nasi lemak special, 3 teh tarik, 2 roti canai. collection at 7pm. name Ahmad",
+  "Hello I would like to enquire about ordering 10 corporate gift boxes for my team. Budget around $50 each. Can deliver to Raffles Place office next Friday? Contact me at john@example.com",
+  "want to order lah. the usual. same as last time. let me know when ready"
+];
+
+let processedCount = 0;
+let totalItems = 0;
+let completeOrders = 0;
+
+function loadSample(i) {
+  document.querySelectorAll('.msg-bubble').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.msg-bubble')[i].classList.add('active');
+  document.getElementById('msgInput').value = SAMPLES[i];
+}
+
+function addLog(msg, type = 'info') {
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8);
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
+  const log = document.getElementById('logEntries');
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateStats(orderData) {
+  processedCount++;
+  const items = orderData.items ? orderData.items.length : 0;
+  totalItems += items;
+
+  const fields = ['customer_name','delivery_address','delivery_time','items'];
+  const filled = fields.filter(f => {
+    if (f === 'items') return orderData.items && orderData.items.length > 0;
+    return orderData[f] && orderData[f] !== 'Not specified' && orderData[f] !== null;
+  }).length;
+  if (filled === fields.length) completeOrders++;
+
+  document.getElementById('statProcessed').textContent = processedCount;
+  document.getElementById('statItems').textContent = totalItems;
+  document.getElementById('statComplete').textContent =
+    Math.round((completeOrders / processedCount) * 100) + '%';
+}
+
+async function processMessage() {
+  const msg = document.getElementById('msgInput').value.trim();
+  if (!msg) { addLog('No message provided.', 'warn'); return; }
+
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Processing...';
+
+  document.getElementById('resultBox').innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>Analyzing message with Claude AI...</span>
+    </div>`;
+
+  addLog('Sending message to Claude AI for extraction...', 'info');
+  const t0 = Date.now();
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer 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'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: `You are an order extraction AI for SME businesses. Given a customer message (WhatsApp, Telegram, Instagram, etc.), extract structured order data.
+
+Return ONLY valid JSON with this exact structure, no explanation or markdown:
+{
+  "customer_name": "string or null",
+  "contact": "string or null",
+  "items": [{"name":"string","quantity":number,"notes":"string or null"}],
+  "delivery_address": "string or null",
+  "delivery_time": "string or null",
+  "order_type": "delivery or collection",
+  "special_notes": "string or null",
+  "missing_fields": ["list of fields that are missing or unclear"],
+  "follow_up_message": "a short WhatsApp reply to send the customer asking for missing info, or null if order is complete",
+  "confidence": "high or medium or low"
+}` },
+          { role: 'user', content: `Customer message:\n\n${msg}` }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    document.getElementById('statTime').textContent = elapsed + 's';
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'API error');
+    }
+
+    const raw = data.choices[0].message.content;
+    let order;
+    try {
+      order = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    } catch {
+      throw new Error('Could not parse AI response');
+    }
+
+    addLog(`Extraction complete in ${elapsed}s. Confidence: ${order.confidence}`, 'ok');
+    updateStats(order);
+    renderResult(order);
+
+  } catch (err) {
+    addLog('Error: ' + err.message, 'err');
+    document.getElementById('resultBox').innerHTML = `
+      <div class="placeholder-state">
+        <div class="placeholder-icon">❌</div>
+        <p style="color:var(--danger)">${err.message}</p>
+        <p style="margin-top:8px;font-size:12px;color:var(--muted)">Make sure you have a valid API key configured.</p>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Extract Order with AI';
+  }
+}
+
+function renderResult(order) {
+  const isComplete = !order.missing_fields || order.missing_fields.length === 0;
+  const confidenceColor = { high: 'chip-success', medium: 'chip-warn', low: 'chip-warn' }[order.confidence] || 'chip-warn';
+
+  const itemsHTML = order.items && order.items.length > 0
+    ? `<table class="items-table">
+        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Notes</th></tr></thead>
+        <tbody>
+          ${order.items.map((it, i) => `
+            <tr>
+              <td style="color:var(--muted);font-family:'Space Mono',monospace">${i+1}</td>
+              <td style="font-weight:700">${it.name}</td>
+              <td><span class="qty-badge">×${it.quantity}</span></td>
+              <td style="color:var(--muted);font-size:12px">${it.notes || '—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`
+    : `<div style="color:var(--danger);font-size:13px;margin-bottom:16px;">⚠️ No items could be extracted</div>`;
+
+  const missingHTML = order.missing_fields && order.missing_fields.length > 0
+    ? `<div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;">
+        <div style="font-size:11px;font-family:'Space Mono',monospace;color:var(--danger);margin-bottom:6px;">MISSING FIELDS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${order.missing_fields.map(f => `<span style="background:rgba(239,68,68,0.1);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:2px 10px;font-size:12px;font-family:'Space Mono',monospace">${f}</span>`).join('')}
+        </div>
+      </div>`
+    : '';
+
+  const followUpHTML = order.follow_up_message
+    ? `<div class="ai-notes">
+        <div class="ai-notes-label">🤖 Suggested Follow-Up Reply</div>
+        ${order.follow_up_message}
+      </div>`
+    : '';
+
+  document.getElementById('resultBox').innerHTML = `
+    <div class="order-result">
+      <div class="result-header">
+        <div class="result-title">Order #${String(processedCount).padStart(4,'0')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="status-chip ${isComplete ? 'chip-success' : 'chip-warn'}">
+            ${isComplete ? '✅ Complete' : '⚠️ Incomplete'}
+          </span>
+          <span class="status-chip ${confidenceColor}">
+            Confidence: ${order.confidence}
+          </span>
+          <span class="status-chip" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)">
+            ${order.order_type === 'delivery' ? '🚚 Delivery' : '🏪 Collection'}
+          </span>
+        </div>
+      </div>
+
+      <div class="order-grid">
+        <div class="order-field">
+          <div class="field-key">Customer Name</div>
+          <div class="field-val ${!order.customer_name ? 'missing' : 'accent'}">${order.customer_name || 'Not provided'}</div>
+        </div>
+        <div class="order-field">
+          <div class="field-key">Contact</div>
+          <div class="field-val ${!order.contact ? 'missing' : ''}">${order.contact || 'Not provided'}</div>
+        </div>
+        <div class="order-field">
+          <div class="field-key">Delivery Address</div>
+          <div class="field-val ${!order.delivery_address ? 'missing' : ''}" style="font-size:13px">${order.delivery_address || 'Not provided'}</div>
+        </div>
+        <div class="order-field">
+          <div class="field-key">Delivery / Collection Time</div>
+          <div class="field-val ${!order.delivery_time ? 'missing' : ''}">${order.delivery_time || 'Not specified'}</div>
+        </div>
+      </div>
+
+      ${itemsHTML}
+      ${missingHTML}
+
+      ${order.special_notes ? `<div class="ai-notes" style="margin-bottom:12px;">
+        <div class="ai-notes-label">📝 Special Notes</div>
+        ${order.special_notes}
+      </div>` : ''}
+
+      ${followUpHTML}
+    </div>`;
+
+  addLog(`Order rendered. ${order.items?.length || 0} item(s). Missing: [${(order.missing_fields||[]).join(', ')||'none'}]`, 'ok');
+}
+</script>
+</body>
+</html>
